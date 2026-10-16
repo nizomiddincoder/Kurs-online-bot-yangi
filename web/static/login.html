@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AZAPRO — kirish</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <div class="login-wrap">
+    <div class="card login">
+      <div class="hero">
+        <div class="brand"><img src="/static/favicon.svg" alt="">AZAPRO</div>
+        <div>
+          <span class="pill" style="background:var(--sage);color:var(--ink);padding:5px 14px">Admin uchun</span>
+          <h1 style="margin-top:16px">Kursingizni bir joydan boshqaring</h1>
+          <p>Lidlar, to'lovlar, chat va kanal kontenti — barchasi shu panelda.</p>
+        </div>
+      </div>
+      <form id="form">
+        <h2>Kirish</h2>
+        <div class="muted">Panel parolini kiriting</div>
+        <input type="password" id="password" autocomplete="current-password" autofocus required placeholder="Parol">
+        <button class="btn primary" type="submit">Kirish</button>
+        <div class="err" id="err"></div>
+      </form>
+    </div>
+  </div>
+  <script>
+    document.getElementById("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const err = document.getElementById("err");
+      err.textContent = "";
+      try {
+        const r = await fetch("/api/login", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({password: document.getElementById("password").value}),
+        });
+        const data = await r.json();
+        if (r.ok) location.href = "/";
+        else err.textContent = data.error || "Xato";
+      } catch (_) {
+        err.textContent = "Server bilan aloqa yo'q";
+      }
+    });
+  </script>
+</body>
+</html>

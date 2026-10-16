@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>AZAPRO</title>
+  <rect width="64" height="64" rx="16" fill="#151515"/>
+  <!-- "A" belgisi: ikki yumaloq chiziq -->
+  <path d="M19 49 L32 15 L45 49" fill="none" stroke="#b8cc8e" stroke-width="7.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- ko'ndalang chiziq -->
+  <line x1="25" y1="37" x2="39" y2="37" stroke="#b8cc8e" stroke-width="6.5" stroke-linecap="round"/>
+  <!-- kichik uchqun -->
+  <circle cx="49.5" cy="15" r="3.2" fill="#f2efe9"/>
+</svg>

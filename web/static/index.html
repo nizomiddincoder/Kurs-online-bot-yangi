@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="uz">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AZAPRO — Admin panel</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><img src="/static/favicon.svg" alt="">AZAPRO</div>
+  <nav class="tabs">
+    <button class="tab active" data-tab="users"><i data-i="users"></i>Foydalanuvchilar</button>
+    <button class="tab" data-tab="chat"><i data-i="chat"></i>Chat <span class="badge hidden" id="chat-badge"></span></button>
+    <button class="tab" data-tab="content"><i data-i="edit"></i>Kontent</button>
+    <button class="tab" data-tab="settings"><i data-i="settings"></i>Sozlamalar</button>
+  </nav>
+  <button class="btn" id="logout"><i data-i="logout"></i>Chiqish</button>
+</header>
+
+<main>
+  <!-- ================= FOYDALANUVCHILAR ================= -->
+  <section id="tab-users">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow"><i data-i="trend" class="sm"></i>Lidlar bazasi</div>
+        <h1>Foydalanuvchilar</h1>
+        <p>Ro'yxatdan o'tganlar, kanallarga obuna holati, kurs guruhlari va xaridlar.</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="check-all" title="Hamma foydalanuvchining kanallardagi a'zoligini Telegram'dan qayta tekshirish"><i data-i="refresh"></i><span>A'zolikni yangilash</span></button>
+        <a class="btn primary" href="/api/users/export.xlsx"><i data-i="download"></i>Excel</a>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="card">
+      <div class="filters">
+        <div class="search-box"><i data-i="search"></i><input type="search" id="f-q" placeholder="Ism, telefon, @username yoki ID"></div>
+        <select id="f-free">
+          <option value="">Bepul kanal: hammasi</option>
+          <option value="yes">Obuna bo'lgan</option>
+          <option value="no">Obuna emas</option>
+        </select>
+        <select id="f-paid">
+          <option value="">Pullik kanal: hammasi</option>
+          <option value="active">Faol obuna</option>
+          <option value="expired">Tugagan / bekor</option>
+          <option value="none">Hech qachon olmagan</option>
+        </select>
+        <select id="f-group"><option value="">Guruh: hammasi</option></select>
+        <select id="f-segment">
+          <option value="">Segment: hammasi</option>
+          <option value="smm">SMM mutaxassisi</option>
+          <option value="biz">Biznes egasi</option>
+          <option value="learn">O'rganuvchi</option>
+        </select>
+        <select id="f-status">
+          <option value="registered">Ro'yxatdan o'tganlar</option>
+          <option value="all">Barcha lidlar</option>
+        </select>
+      </div>
+      <div class="table-wrap">
+        <table class="users-table">
+          <thead>
+          <tr>
+            <th>Ism</th><th>Telefon</th><th>Bepul kanal</th><th>Pullik kanal</th>
+            <th>Kurs guruhi</th><th>Xaridlar</th><th>Sana</th><th></th>
+          </tr>
+          </thead>
+          <tbody id="users-body"></tbody>
+        </table>
+      </div>
+      <div class="pager">
+        <span class="muted" id="users-total"></span>
+        <span class="nav">
+          <button class="btn icon" id="prev" title="Oldingi sahifa"><i data-i="left"></i></button>
+          <span id="page-info" class="muted"></span>
+          <button class="btn icon" id="next" title="Keyingi sahifa"><i data-i="right"></i></button>
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= CHAT ================= -->
+  <section id="tab-chat" class="hidden">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow"><i data-i="chat" class="sm"></i>Online yozishma</div>
+        <h1>Chat</h1>
+        <p>Botga yozganlarning xabarlari shu yerda. Javobingiz foydalanuvchiga bot orqali boradi.</p>
+      </div>
+    </div>
+    <div class="card chat" id="chat">
+      <div class="chat-list">
+        <div class="search"><div class="search-box"><i data-i="search"></i><input type="search" id="chat-q" placeholder="Qidirish"></div></div>
+        <div class="chat-items" id="chat-items"></div>
+      </div>
+      <div class="conv" id="conv">
+        <div class="conv-empty" id="conv-empty"><div><i data-i="chat"></i><div>Chap tomondan suhbatni tanlang</div></div></div>
+        <div class="conv-head hidden" id="conv-head">
+          <button class="btn icon back-btn" id="conv-back" title="Orqaga"><i data-i="left"></i></button>
+          <div class="avatar" id="conv-avatar"></div>
+          <div class="info">
+            <div class="name" id="conv-name"></div>
+            <div class="small muted" id="conv-sub"></div>
+          </div>
+        </div>
+        <div class="messages hidden" id="messages"></div>
+        <div class="attach-name hidden" id="attach-name"></div>
+        <form class="composer hidden" id="composer">
+          <label class="btn icon" title="Rasm yoki fayl biriktirish"><i data-i="clip"></i><input type="file" id="chat-file" hidden></label>
+          <textarea id="chat-text" rows="1" placeholder="Javob yozing… (Enter — yuborish, Shift+Enter — yangi qator)"></textarea>
+          <button class="btn primary icon" type="submit" id="chat-send" title="Yuborish"><i data-i="send"></i></button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= KONTENT ================= -->
+  <section id="tab-content" class="hidden">
+    <div class="page-head">
+      <div>
+        <div class="eyebrow"><i data-i="megaphone" class="sm"></i>Kanallar va bot uchun</div>
+        <h1>Kontent tayyorlash</h1>
+        <p>Rasm, matn va tugmalarni tayyorlang, so'ng qayerga joylashni tanlang.</p>
+      </div>
+    </div>
+    <div class="content-grid">
+      <div>
+        <div class="card section">
+          <h3><span class="step">1</span>Rasm yoki video</h3>
+          <div class="dropzone" id="dropzone">
+            <i data-i="upload"></i>
+            Rasm yoki videoni shu yerga tashlang yoki <b>bosib tanlang</b><div class="small">10 tagacha — albom bo'ladi</div>
+            <input type="file" id="media-input" accept="image/*,video/*" multiple hidden>
+          </div>
+          <div class="thumbs" id="thumbs"></div>
+        </div>
+
+        <div class="card section">
+          <h3><span class="step">2</span>Matn</h3>
+          <div class="toolbar" id="toolbar">
+            <button class="btn" data-cmd="bold" title="Qalin (Ctrl+B)"><b>B</b></button>
+            <button class="btn" data-cmd="italic" title="Kursiv (Ctrl+I)"><i style="font-family:Georgia,serif">I</i></button>
+            <button class="btn" data-cmd="underline" title="Tagiga chizilgan (Ctrl+U)"><u>U</u></button>
+            <button class="btn" data-cmd="strikeThrough" title="O'chirilgan"><s>S</s></button>
+            <span class="sep"></span>
+            <button class="btn" data-wrap="code" title="Nusxalanadigan matn (monospace)"><i data-i="code"></i></button>
+            <button class="btn" data-wrap="spoiler" title="Yashirin matn (spoiler)"><i data-i="eye-off"></i></button>
+            <button class="btn" data-wrap="blockquote" title="Iqtibos"><i data-i="quote"></i></button>
+            <button class="btn" id="link-btn" title="Havola qo'shish"><i data-i="link"></i></button>
+            <span class="emoji-wrap">
+              <button class="btn" id="emoji-btn" title="Emoji qo'shish (post uchun)"><i data-i="smile"></i></button>
+              <div class="emoji-pop hidden" id="emoji-row"></div>
+            </span>
+            <span class="sep"></span>
+            <select id="transform" title="So'zlarga ishlov berish">
+              <option value="">Matnga ishlov berish…</option>
+              <option value="upper">KATTA HARFLAR</option>
+              <option value="lower">kichik harflar</option>
+              <option value="title">Har So'z Bosh Harfda</option>
+              <option value="sentence">Gap boshi katta harf</option>
+              <option value="lat2cyr">Lotin → Кирилл</option>
+              <option value="cyr2lat">Кирилл → Lotin</option>
+              <option value="apos">Oʻ, gʻ va tutuq belgisini to'g'rilash</option>
+              <option value="typo">Tipografiya: «qo'shtirnoq», tire —</option>
+              <option value="spaces">Ortiqcha bo'shliqlarni tozalash</option>
+              <option value="hashtag">So'zlarni #heshteg qilish</option>
+              <option value="bullets">Qatorlar boshiga • belgisi</option>
+              <option value="numbers">Qatorlarni raqamlash 1. 2. 3.</option>
+            </select>
+            <button class="btn" id="clear-format" title="Formatlashni olib tashlash"><i data-i="eraser"></i></button>
+            <button class="btn" id="undo" title="Bekor qilish (Ctrl+Z)"><i data-i="undo"></i></button>
+          </div>
+          <div class="editor" id="editor" contenteditable="true" data-placeholder="Post matnini yozing…"></div>
+          <div class="counter" id="counter"></div>
+          <div class="help">Ishlov berish belgilangan matnga qo'llanadi; hech narsa belgilanmagan bo'lsa — butun matnga.</div>
+        </div>
+
+        <div class="card section">
+          <h3><span class="step">3</span>Tugmalar <span class="muted small" style="font-weight:500">ixtiyoriy</span></h3>
+          <div class="btn-rows" id="btn-rows"></div>
+          <button class="btn" id="add-btn" style="margin-top:10px"><i data-i="plus"></i>Tugma qo'shish</button>
+        </div>
+
+        <div class="card section">
+          <div class="options">
+            <label><input type="checkbox" id="opt-silent"> <i data-i="bell-off"></i> Ovozsiz yuborish</label>
+            <label><input type="checkbox" id="opt-nopreview"> <i data-i="link"></i> Havola ko'rinishini o'chirish</label>
+          </div>
+        </div>
+
+        <div class="actions-bar">
+          <button class="btn danger" id="clear-post"><i data-i="trash"></i>Tozalash</button>
+          <button class="btn" id="test-post"><i data-i="flask"></i>Menga test yuborish</button>
+          <button class="btn primary" id="publish"><i data-i="send"></i>Joylash…</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="card section">
+          <h3><i data-i="image"></i>Telegram'da ko'rinishi</h3>
+          <div class="tg-bg">
+            <div class="tg-post">
+              <div class="tg-media" id="pv-media"></div>
+              <div class="tg-text" id="pv-text"></div>
+            </div>
+            <div class="tg-buttons" id="pv-buttons"></div>
+          </div>
+        </div>
+        <div class="card section">
+          <h3><i data-i="layers"></i>Joylanganlar tarixi</h3>
+          <div id="history"><div class="muted">Hali post yo'q</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= SOZLAMALAR ================= -->
+  <section id="tab-settings" class="hidden">
+    <div class="settings">
+      <div class="page-head">
+        <div>
+          <div class="eyebrow"><i data-i="settings" class="sm"></i>Bir marta sozlanadi</div>
+          <h1>Sozlamalar</h1>
+          <p>Kanallar, karta, narxlar va bot matnlari. O'zgarishlar darhol kuchga kiradi.</p>
+        </div>
+      </div>
+
+      <div class="card dark section hint-card">
+        <div class="ico"><i data-i="info"></i></div>
+        <div>
+          <b>Kanal ID sini qanday bilaman?</b>
+          <ol>
+            <li>Botni kanalga <b>admin</b> qiling («Foydalanuvchi qo'shish» va «Bloklash» huquqlari bilan) — bot sizga kanal ID sini o'zi yozib yuboradi.</li>
+            <li>Yoki kanaldagi istalgan postni botga <b>forward</b> qiling — bot ID ni javob qilib yozadi.</li>
+          </ol>
+          <div class="small">ID ni nusxalab, quyidagi maydonga qo'ying va «Tekshirish»ni bosing.</div>
+        </div>
+      </div>
+
+      <form class="card section" id="sec-channels" data-section="channels">
+        <h3><i data-i="megaphone"></i>Kanallar va adminlar</h3>
+        <div class="fields"></div>
+        <div class="sec-foot"><button class="btn primary" type="submit"><i data-i="save"></i>Saqlash</button></div>
+      </form>
+
+      <form class="card section" id="sec-payment" data-section="payment">
+        <h3><i data-i="card"></i>To'lov</h3>
+        <div class="fields"></div>
+        <div class="sec-foot"><button class="btn primary" type="submit"><i data-i="save"></i>Saqlash</button></div>
+      </form>
+
+      <form class="card section" id="sec-tariffs">
+        <h3><i data-i="book"></i>Online kurs tariflari</h3>
+        <div id="tariff-fields"></div>
+        <div class="field">
+          <label for="senior-limit">Senior tarifi — joylar soni</label>
+          <input type="text" id="senior-limit" inputmode="numeric" style="max-width:160px">
+          <div class="help">Shuncha kishi sotib olgach, tarif «Joylar tugadi» deb ko'rsatiladi.</div>
+        </div>
+        <div class="sec-foot"><button class="btn primary" type="submit"><i data-i="save"></i>Saqlash</button></div>
+      </form>
+
+      <div class="card section">
+        <h3><i data-i="mail"></i>Bot matnlari</h3>
+        <div id="text-fields"></div>
+      </div>
+
+      <form class="card section" id="sec-password">
+        <h3><i data-i="lock"></i>Panel paroli</h3>
+        <div class="help" id="pw-source" style="margin:0 0 14px"></div>
+        <div class="field"><label>Hozirgi parol</label><input type="password" id="pw-current" autocomplete="current-password"></div>
+        <div class="field"><label>Yangi parol</label><input type="password" id="pw-new" autocomplete="new-password">
+          <div class="help">Kamida 10 belgi, harf va raqam aralash.</div></div>
+        <div class="field"><label>Yangi parol (takror)</label><input type="password" id="pw-confirm" autocomplete="new-password"></div>
+        <div class="sec-foot"><button class="btn primary" type="submit"><i data-i="key"></i>Parolni o'zgartirish</button></div>
+      </form>
+
+      <div class="card section">
+        <h3><i data-i="key"></i>Railway'da qoladigan kalitlar</h3>
+        <div class="help" style="margin:0 0 10px">Bular bot ishga tushishi uchun kerak, shuning uchun faqat Railway → Variables bo'limida o'zgartiriladi.</div>
+        <div id="system-info"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="publish-dlg">
+  <div class="dlg-head">Qayerga joylaymiz?</div>
+  <div class="dlg-body" id="publish-body"></div>
+  <div class="dlg-foot" id="publish-foot">
+    <button class="btn" id="publish-cancel">Bekor qilish</button>
+    <button class="btn primary" id="publish-go"><i data-i="send"></i><span>Joylash</span></button>
+  </div>
+</dialog>
+
+<script src="/static/icons.js"></script>
+<script src="/static/translit.js"></script>
+<script src="/static/app.js"></script>
+<script src="/static/editor.js"></script>
+<script src="/static/settings.js"></script>
+</body>
+</html>
