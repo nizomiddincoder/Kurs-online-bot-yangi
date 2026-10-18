@@ -20,8 +20,12 @@ router = Router()
 async def on_join_request(req: ChatJoinRequest, bot: Bot, session: AsyncSession, config: Config):
     chat_id = req.chat.id
     is_paid_channel = chat_id == config.paid_channel_id
-    group = None if is_paid_channel else await session.scalar(select(Group).where(Group.chat_id == chat_id))
-    if not is_paid_channel and group is None:
+    # Premium kurs guruhi yoki Standart yozuvlar chati
+    is_course_chat = not is_paid_channel and chat_id in {config.course_group_id, config.recordings_chat_id} - {0}
+    group = None
+    if not (is_paid_channel or is_course_chat):
+        group = await session.scalar(select(Group).where(Group.chat_id == chat_id))
+    if not (is_paid_channel or is_course_chat) and group is None:
         return  # bizga tegishli bo'lmagan chat — tegmaymiz
 
     user = await get_user(session, req.from_user.id)
@@ -47,6 +51,11 @@ async def on_join_request(req: ChatJoinRequest, bot: Bot, session: AsyncSession,
         elif link and group and link.kind == "group" and link.enrollment_id:
             enrollment = await session.get(Enrollment, link.enrollment_id)
             approve = enrollment is not None and enrollment.user_id == user.id and enrollment.group_id == group.id
+        elif link and is_course_chat and link.kind == "course":
+            # Havola faqat tasdiqlangan to'lovdan keyin shu foydalanuvchi uchun yaratiladi
+            approve = True
+            if link.enrollment_id:
+                enrollment = await session.get(Enrollment, link.enrollment_id)
 
     try:
         if approve:
@@ -56,7 +65,7 @@ async def on_join_request(req: ChatJoinRequest, bot: Bot, session: AsyncSession,
             if enrollment:
                 enrollment.status = "joined"
                 enrollment.joined_at = now_utc()
-            else:
+            elif is_paid_channel:
                 user.paid_member = True
                 user.members_checked_at = now_utc()
             await session.commit()

@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
@@ -15,6 +16,7 @@ from db.models import Payment, ProcessedUpdate, Subscription, User
 from db.repo import count_pending_payments
 from keyboards.inline import renew_kb
 from services.chats import kick_from_chat
+from services.funnel import funnel_tick
 from services.common import esc, fmt_date, fmt_money, get_tz, now_utc, safe_send, to_local
 from services.notify import notify_admins
 from services.reports import active_subs_count
@@ -101,6 +103,16 @@ def setup_scheduler(bot: Bot, sessionmaker: async_sessionmaker, config: Config) 
         kwargs={"bot": bot, "sessionmaker": sessionmaker, "config": config},
         id="daily_job",
         misfire_grace_time=3600,
+        coalesce=True,
+        replace_existing=True,
+    )
+    # Webinar voronkasi: eslatmalar va follow-up'lar (holat bazada — restartdan keyin davom etadi)
+    scheduler.add_job(
+        funnel_tick,
+        IntervalTrigger(seconds=5 if config.test_mode else 60),
+        kwargs={"bot": bot, "sessionmaker": sessionmaker, "config": config},
+        id="funnel_tick",
+        max_instances=1,
         coalesce=True,
         replace_existing=True,
     )

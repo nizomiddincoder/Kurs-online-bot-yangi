@@ -44,12 +44,15 @@ async def set_commands(bot: Bot, config: Config) -> None:
     admin_cmds = [
         BotCommand(command="start", description="Botni ishga tushirish"),
         BotCommand(command="admin", description="Admin panel"),
-        BotCommand(command="setgift", description="Bepul sovg'a matni"),
+        BotCommand(command="stats", description="Statistika"),
+        BotCommand(command="broadcast", description="Xabar tarqatish"),
+        BotCommand(command="export", description="Foydalanuvchilar (CSV)"),
+        BotCommand(command="hot", description="Issiq lidlar"),
+        BotCommand(command="setbonus", description="Kod so'z bonusi matni"),
+        BotCommand(command="setbonusfile", description="Bonus fayli"),
+        BotCommand(command="settariff", description="Tarif tavsifi"),
         BotCommand(command="setlesson", description="Bepul dars matni"),
         BotCommand(command="setabout", description="Men haqimda matni"),
-        BotCommand(command="settariff", description="Tarif narxi va tavsifi"),
-        BotCommand(command="setseniorlimit", description="Senior joylar soni"),
-        BotCommand(command="groups", description="Guruhlar"),
         BotCommand(command="cancel", description="Bekor qilish"),
     ]
     for admin_id in config.admin_ids:
@@ -61,7 +64,9 @@ async def set_commands(bot: Bot, config: Config) -> None:
 
 async def startup_checks(bot: Bot, config: Config) -> None:
     """Bot kanallarda admin ekanini tekshiradi."""
-    for name, chat_id in (("FREE_CHANNEL", config.free_channel_id), ("PAID_CHANNEL", config.paid_channel_id)):
+    chats = (("FREE_CHANNEL", config.free_channel_id), ("PAID_CHANNEL", config.paid_channel_id),
+             ("COURSE_GROUP", config.course_group_id), ("RECORDINGS_CHAT", config.recordings_chat_id))
+    for name, chat_id in chats:
         if not chat_id:
             await notify_admins(bot, config, texts.STARTUP_NOT_CONFIGURED.format(chat=name))
             continue

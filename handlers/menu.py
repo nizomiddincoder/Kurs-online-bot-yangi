@@ -10,32 +10,31 @@ from config import Config
 from db.models import Enrollment
 from db.repo import get_active_subscription, get_user, user_enrollments
 from handlers.common import registered_user
-from keyboards.inline import pay_kb, tariffs_kb
+from keyboards.inline import pay_kb
 from services.chats import is_member
 from services.common import esc, fmt_date, fmt_money
 from services.courses import resend_group_link
+from services.funnel import offer_view
 from services.settings import get_tariff, get_text, senior_is_full
 from services.subscriptions import send_channel_link
 
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
 
-TARIFFS = ("basic", "middle", "senior")
+TARIFFS = ()  # eski Basic/Middle/Senior endi menyuda ko'rsatilmaydi (Standart/Premium bilan almashtirildi)
 
 
 # ---------------- Online kurs ----------------
 async def _course_view(session: AsyncSession, config: Config, user) -> tuple[str, object]:
-    tariffs = [await get_tariff(session, config, t) for t in TARIFFS]
-    full = await senior_is_full(session, config)
-    text = texts.COURSE_INTRO
-    for t in tariffs:
-        mark = f" — <b>{texts.SEATS_FULL}</b>" if t["code"] == "senior" and full else ""
-        text += texts.COURSE_TARIFF_LINE.format(title=t["title"], price=fmt_money(t["price"]), full=mark)
-    extra = [
-        InlineKeyboardButton(text=f"{texts.BTN_GET_GROUP_LINK} ({texts.TARIFF_NAMES[e.tariff]})", callback_data=f"grplink:{e.id}")
+    """Standart/Premium: taklif muddati ichida maxsus narx, keyin to'liq narx."""
+    text, kb = await offer_view(session, config, user)
+    # Eski (Basic/Middle/Senior) o'quvchilar uchun guruh havolasini qayta olish tugmasi
+    kb.inline_keyboard.extend(
+        [InlineKeyboardButton(text=f"{texts.BTN_GET_GROUP_LINK} ({texts.TARIFF_NAMES[e.tariff]})",
+                              callback_data=f"grplink:{e.id}")]
         for e in await user_enrollments(session, user.id) if e.group_id
-    ]
-    return text, tariffs_kb(tariffs, full, extra)
+    )
+    return text, kb
 
 
 @router.message(F.text == texts.BTN_COURSE)

@@ -19,13 +19,13 @@ from keyboards.reply import cancel_kb
 from services.chats import bot_rights_problem
 from services.common import esc, fmt_money
 from services.courses import assign_waiting
-from services.settings import get_text, get_tariff, set_setting
+from services.settings import COURSE_TARIFFS, get_text, get_tariff, set_setting
 
 router = Router()
 router.message.filter(IsAdmin())
 router.callback_query.filter(IsAdmin())
 
-TEXT_COMMANDS = {"setgift": "gift_text", "setlesson": "lesson_text", "setabout": "about_text"}
+TEXT_COMMANDS = {"setbonus": "bonus_text", "setlesson": "lesson_text", "setabout": "about_text"}
 
 
 class EditText(StatesGroup):
@@ -70,15 +70,14 @@ async def tariff_start(message: Message, state: FSMContext):
 @router.callback_query(F.data.startswith("st:"))
 async def tariff_chosen(cb: CallbackQuery, state: FSMContext, session: AsyncSession, config: Config):
     code = cb.data.split(":", 1)[1]
-    if code not in texts.TARIFF_NAMES:
+    if code not in COURSE_TARIFFS:
         await cb.answer()
         return
+    # Narxlar (to'liq va maxsus) web-panel → Sozlamalar'da; bu yerda faqat tavsif
     t = await get_tariff(session, config, code)
-    await state.set_state(EditTariff.price)
+    await state.set_state(EditTariff.desc)
     await state.update_data(tariff=code)
-    await cb.message.answer(
-        texts.ASK_TARIFF_PRICE.format(title=t["title"], price=fmt_money(t["price"])), reply_markup=cancel_kb()
-    )
+    await cb.message.answer(texts.ASK_TARIFF_DESC.format(desc=t["desc"]), reply_markup=cancel_kb())
     await cb.answer()
 
 

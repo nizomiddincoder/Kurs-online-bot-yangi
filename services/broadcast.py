@@ -24,7 +24,7 @@ async def count_audience(session: AsyncSession, audience: str) -> int:
     return await session.scalar(select(func.count()).select_from(audience_query(audience).subquery())) or 0
 
 
-async def _deliver(send: Callable[[int], Awaitable], chat_id: int) -> str:
+async def _deliver(send: Callable[[int], Awaitable], chat_id: int) -> str:  # funnel.py ham ishlatadi
     for _ in range(3):
         try:
             await send(chat_id)

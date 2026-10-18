@@ -20,8 +20,8 @@ from keyboards.inline import segments_kb, subscribe_kb
 from keyboards.reply import phone_kb
 from services.chats import check_member, free_channel_link
 from services.common import esc, now_utc
+from services.funnel import webinar_line
 from services.notify import notify_admins
-from services.settings import get_text
 
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
@@ -33,6 +33,7 @@ class Reg(StatesGroup):
     name = State()
     phone = State()
     segment = State()
+    problem = State()  # «Qaysi muammo bilan kelyapsiz?»
     subscribe = State()
 
 
@@ -59,7 +60,7 @@ async def cmd_start(message: Message, command: CommandObject, state: FSMContext,
         )
         return
 
-    await message.answer(texts.WELCOME, reply_markup=ReplyKeyboardRemove())
+    await message.answer(texts.WELCOME.format(webinar=webinar_line(config)), reply_markup=ReplyKeyboardRemove())
     await state.set_state(Reg.name)
 
 
@@ -133,18 +134,38 @@ async def got_segment(cb: CallbackQuery, state: FSMContext, session: AsyncSessio
     if user.registered:  # segmentni qayta tanlagan bo'lsa
         await cb.message.answer(texts.MENU_HINT, reply_markup=menu_for(user, config, cb.from_user.id))
         return
+    await cb.message.answer(texts.ASK_PROBLEM)
+    await state.set_state(Reg.problem)
 
+
+@router.message(Reg.problem, F.text)
+async def got_problem(message: Message, state: FSMContext, session: AsyncSession, bot: Bot, config: Config):
+    user = await get_user(session, message.from_user.id)
+    if user is None:
+        await message.answer(texts.NEED_START)
+        return
+    user.problem = message.text.strip()[:1000]
+    await session.commit()
+    await _ask_subscribe(message, state, session, bot, config, user)
+
+
+@router.message(Reg.problem)
+async def problem_not_text(message: Message):
+    await message.answer(texts.PROBLEM_TEXT_ONLY)
+
+
+async def _ask_subscribe(message: Message, state: FSMContext, session: AsyncSession, bot: Bot,
+                         config: Config, user: User) -> None:
     if not config.free_channel_id:
         # Bepul kanal hali sozlanmagan — foydalanuvchini kutdirmaymiz, obuna bosqichi o'tkazib yuboriladi
         await _alert_admins_once(bot, config, texts.ADMIN_FREE_CHANNEL_MISSING)
-        await _finish_registration(cb.message, session, user, config, subscribed=False)
         await state.clear()
+        await _finish_registration(message, session, user, config, subscribed=False)
         return
-
     link = await free_channel_link(bot, config)
     if not link:
         await _alert_admins_once(bot, config, texts.ADMIN_FREE_LINK_MISSING)
-    await cb.message.answer(texts.ASK_SUBSCRIBE, reply_markup=subscribe_kb(link))
+    await message.answer(texts.ASK_SUBSCRIBE, reply_markup=subscribe_kb(link))
     await state.set_state(Reg.subscribe)
 
 
@@ -164,8 +185,10 @@ async def _finish_registration(message: Message, session: AsyncSession, user: Us
         user.registered = True
         user.registered_at = now_utc()
         await session.commit()
-        await message.answer(texts.SUB_CONFIRMED if subscribed else texts.REG_DONE)
-        await message.answer(await get_text(session, "gift_text"), disable_web_page_preview=True)
+        # 5 ta prompt endi bot orqali emas — bepul kanalda kontent sifatida turadi
+        await message.answer(texts.REG_DONE.format(webinar=webinar_line(config)),
+                             reply_markup=menu_for(user, config, user.tg_id))
+        return
     await message.answer(texts.MENU_HINT, reply_markup=menu_for(user, config, user.tg_id))
 
 
@@ -179,7 +202,7 @@ async def check_subscription(cb: CallbackQuery, state: FSMContext, session: Asyn
     if member is False:
         await cb.answer(texts.NOT_SUBSCRIBED, show_alert=True)
         return
-    if member is None:
+    if member is None and not user.registered:
         # Bot kanalni tekshira olmadi (bot admin emas / kanal ID xato) — foydalanuvchi aybdor emas, o'tkazamiz
         await _alert_admins_once(bot, config, texts.ADMIN_FREE_CHECK_FAILED)
 

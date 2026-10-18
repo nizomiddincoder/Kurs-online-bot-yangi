@@ -13,6 +13,7 @@ from db.models import Enrollment, Payment
 from keyboards.inline import admin_payment_kb
 from services.common import esc, fmt_dt, fmt_money, now_utc, safe_send, user_card
 from services.courses import assign_group
+from services.funnel import deliver_course
 from services.notify import notify_admins
 from services.subscriptions import deliver_channel_access, extend_subscription
 
@@ -101,7 +102,10 @@ async def approve_payment(bot: Bot, session: AsyncSession, config: Config, payme
         if payment.product == "paid_channel":
             sub = await extend_subscription(session, user, config.subscription_days)
             await deliver_channel_access(bot, session, config, user, sub)
-        else:
+        elif payment.product in ("tariff_standard", "tariff_premium"):
+            # Premium → kurs guruhi, Standart → yozuvlar; ikkalasiga pullik kanal va obuna +30 kun
+            await deliver_course(bot, session, config, user, payment.product.removeprefix("tariff_"), payment.id)
+        else:  # eski Basic/Middle/Senior to'lovlari (o'zgarishsiz)
             tariff = payment.product.removeprefix("tariff_")
             enrollment = Enrollment(user=user, payment_id=payment.id, tariff=tariff, status="waiting_group")
             session.add(enrollment)

@@ -13,8 +13,9 @@ from db.repo import get_pending_payment, get_user
 from handlers.common import menu_for
 from keyboards.reply import cancel_kb
 from services.common import esc, fmt_money
+from services.funnel import offer_view, premium_left
 from services.payments import send_payment_to_admins
-from services.settings import product_price, senior_is_full
+from services.settings import product_price
 
 router = Router()
 router.message.filter(F.chat.type == ChatType.PRIVATE)
@@ -34,14 +35,21 @@ async def start_payment(cb: CallbackQuery, state: FSMContext, session: AsyncSess
     if user is None or not user.registered:
         await cb.answer(texts.NEED_START, show_alert=True)
         return
-    if product == "tariff_senior" and await senior_is_full(session, config):
-        await cb.answer(texts.SEATS_FULL_ALERT, show_alert=True)
+    if product in ("tariff_basic", "tariff_middle", "tariff_senior"):
+        # Eski tariflar o'rniga endi Standart/Premium — eski xabardagi tugma bosilsa yangi taklifni ko'rsatamiz
+        text, kb = await offer_view(session, config, user)
+        await cb.message.answer(text, reply_markup=kb)
+        await cb.answer()
+        return
+    if product == "tariff_premium" and await premium_left(session, config) <= 0:
+        await cb.answer(texts.PREMIUM_GONE_ALERT, show_alert=True)
         return
     if await get_pending_payment(session, user.id, product):
         await cb.answer(texts.PAYMENT_ALREADY_PENDING, show_alert=True)
         return
 
-    price = await product_price(session, config, product)
+    # Standart/Premium: taklif muddati ichida maxsus narx, keyin to'liq narx
+    price = await product_price(session, config, product, user)
     await state.set_state(PayStates.receipt)
     await state.update_data(product=product, amount=price)
     await cb.message.answer(

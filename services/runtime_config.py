@@ -7,13 +7,15 @@ import hmac
 import re
 import secrets
 from dataclasses import dataclass
+from datetime import datetime
 
 from aiogram import Bot
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import Config
+from config import Config, parse_local_dt
 from db.models import Setting
+from services.common import get_tz, to_local
 
 PREFIX = "cfg:"
 PASSWORD_KEY = "panel_password_hash"
@@ -47,6 +49,28 @@ FIELDS = [
           "Ism Familiya"),
     Field("paid_channel_price", "PAID_CHANNEL_PRICE", "payment", "Pullik kanal narxi (so'm / 30 kun)",
           "", "money", "25000"),
+    # --- Webinar va tariflar ---
+    Field("webinar_at", "WEBINAR_DATETIME", "webinar", "Dars (webinar) vaqti",
+          "Toshkent vaqti bilan. Eslatmalar shunga qarab yuboriladi: 24 soat oldin, dars kuni 10:00, "
+          "1 soat va 10 daqiqa oldin. Dars + 2 soatda follow-up boshlanadi.", "datetime", "2026-10-25 20:00"),
+    Field("codeword", "CODEWORD", "webinar", "Kod so'z",
+          "Dars oxirida aytasiz. Foydalanuvchi botga yozsa — bonus va 48 soatlik shaxsiy taklif boshlanadi. "
+          "Katta-kichik harf farqi yo'q.", "text", "AZAPRO"),
+    Field("course_group_id", "COURSE_GROUP_ID", "webinar", "Premium kurs guruhi ID si",
+          "Premium to'laganlar shu guruhga bir martalik havola oladi. Bot guruhda admin bo'lishi kerak.",
+          "chat", "-1001234567890"),
+    Field("recordings_chat_id", "RECORDINGS_CHAT_ID", "webinar", "Standart: dars yozuvlari chati ID si",
+          "Standart to'laganlar shu kanal/guruhga havola oladi. Bot u yerda admin bo'lishi kerak.",
+          "chat", "-1001234567890"),
+    Field("price_standard_full", "PRICE_STANDARD_FULL", "webinar", "Standart — to'liq narx (so'm)", "", "money", "500000"),
+    Field("price_standard_offer", "PRICE_STANDARD_OFFER", "webinar", "Standart — maxsus narx (so'm)",
+          "Taklif muddati ichida ko'rsatiladi; to'liq narx ustidan chizilgan holda.", "money", "350000"),
+    Field("price_premium_full", "PRICE_PREMIUM_FULL", "webinar", "Premium — to'liq narx (so'm)", "", "money", "1500000"),
+    Field("price_premium_offer", "PRICE_PREMIUM_OFFER", "webinar", "Premium — maxsus narx (so'm)", "", "money", "990000"),
+    Field("premium_seats", "PREMIUM_SEATS", "webinar", "Premium joylar soni",
+          "Tasdiqlangan Premium to'lovlar shunga yetsa — «Joylar tugadi» ko'rsatiladi.", "int", "20"),
+    Field("offer_hours", "OFFER_HOURS", "webinar", "Maxsus taklif muddati (soat)",
+          "Kod so'z yozilgandan (yoki dars + 2 soatdan) boshlab.", "int", "48"),
 ]
 FIELD_MAP = {f.name: f for f in FIELDS}
 
@@ -94,6 +118,12 @@ def parse(field: Field, raw: str):
         if not digits.isdigit() or int(digits) <= 0:
             raise ValueError("Narx musbat butun son bo'lishi kerak")
         return int(digits)
+    if field.kind == "int":
+        if not raw.isdigit() or int(raw) <= 0:
+            raise ValueError("Musbat butun son kiriting")
+        return int(raw)
+    if field.kind == "datetime":
+        return parse_local_dt(raw, get_tz())
     if not raw:
         raise ValueError("Bo'sh bo'lishi mumkin emas")
     return raw[:128]
@@ -102,6 +132,8 @@ def parse(field: Field, raw: str):
 def to_text(value) -> str:
     if isinstance(value, tuple):
         return ", ".join(str(v) for v in value)
+    if isinstance(value, datetime):
+        return to_local(value).strftime("%Y-%m-%d %H:%M")
     return "" if value in (None, 0) else str(value)
 
 

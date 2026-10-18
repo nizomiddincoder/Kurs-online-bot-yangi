@@ -88,7 +88,7 @@ function paidCell(p) {
 
 function groupCell(groups) {
   if (!groups.length) return `<span class="muted">—</span>`;
-  const st = { waiting_group: "guruh kutmoqda", link_sent: "havola yuborildi", joined: "qo'shilgan" };
+  const st = { waiting_group: "guruh kutmoqda", link_sent: "havola yuborildi", joined: "qo'shilgan", no_chat: "chat sozlanmagan" };
   return groups.map((g) => `<div class="group-line"><b>${esc(g.tariff)}</b>: ${g.title ? esc(g.title) : ""} <span class="sub">${st[g.status] || g.status}</span></div>`).join("");
 }
 

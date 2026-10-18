@@ -28,7 +28,11 @@ async def init_db(engine: AsyncEngine) -> None:
 
 # Eski bazaga yangi ustunlarni qo'shish (create_all mavjud jadvalni o'zgartirmaydi)
 NEW_COLUMNS = {
-    "users": {"free_member": "BOOLEAN", "paid_member": "BOOLEAN", "members_checked_at": "TIMESTAMP"},
+    "users": {
+        "free_member": "BOOLEAN", "paid_member": "BOOLEAN", "members_checked_at": "TIMESTAMP",
+        "problem": "TEXT", "webinar_watched": "BOOLEAN", "codeword_at": "TIMESTAMP",
+        "offer_started_at": "TIMESTAMP", "offer_expires_at": "TIMESTAMP",
+    },
 }
 
 

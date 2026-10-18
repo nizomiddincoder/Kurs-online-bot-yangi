@@ -72,7 +72,7 @@
 
   function render(s) {
     state = s;
-    for (const sec of ["channels", "payment"]) {
+    for (const sec of ["channels", "payment", "webinar"]) {
       $(`#sec-${sec} .fields`).innerHTML = s.fields.filter((f) => f.section === sec).map(fieldHtml).join("");
     }
 
@@ -83,14 +83,14 @@
       box.className = "tariff-box";
       box.dataset.code = t.code;
       box.innerHTML = `<h4>${esc(t.title)}</h4>
-        <div class="field"><label>Narxi (so'm)</label><input type="text" inputmode="numeric" class="t-price" value="${t.price}" style="max-width:200px"></div>
+        <div class="help" style="margin:-6px 0 10px">Narx: <s>${money(t.price)} so'm</s> → <b>${money(t.offer)} so'm</b> (narxlar yuqoridagi «Webinar va tariflar» bo'limida)</div>
         <div class="field"><label>Tavsifi</label><div class="t-desc"></div></div>`;
       const ed = miniEditor(t.desc, "Tarifga nimalar kiradi…");
       box.querySelector(".t-desc").append(ed);
       box.editor = ed;
       tf.append(box);
     }
-    $("#senior-limit").value = s.senior_limit;
+
 
     const txt = $("#text-fields");
     txt.innerHTML = "";
@@ -117,6 +117,7 @@
       ["BOT_TOKEN", sys.bot ? `${icon("check-circle")}Ulangan: <b>${esc(sys.bot)}</b>` : `<span class="pill bad">Bot bilan aloqa yo'q</span>`],
       ["DATABASE_URL", sys.database.startsWith("PostgreSQL") ? `${icon("check-circle")}${esc(sys.database)}` : `${icon("alert")}${esc(sys.database)} — Railway'da Postgres ulang`],
       ["TIMEZONE", esc(sys.timezone)],
+      ["TEST_MODE", sys.test_mode ? `<span class="pill warn">${icon("alert", "sm")}Yoqilgan — taymerlar daqiqada</span>` : "O'chiq (oddiy rejim)"],
       ["ADMIN_PANEL_PASSWORD", "Panelga birinchi kirish paroli"],
     ].map(([k, v]) => `<div class="sys-line"><code>${k}</code><span>${v}</span></div>`).join("");
   }
@@ -151,7 +152,7 @@
   });
 
   /* ---------- Saqlash: kanallar va to'lov ---------- */
-  ["channels", "payment"].forEach((sec) => {
+  ["channels", "payment", "webinar"].forEach((sec) => {
     $(`#sec-${sec}`).addEventListener("submit", async (e) => {
       e.preventDefault();
       const form = e.currentTarget;
@@ -188,10 +189,10 @@
     e.preventDefault();
     const tariffs = {};
     $$("#tariff-fields .tariff-box").forEach((b) => {
-      tariffs[b.dataset.code] = { price: b.querySelector(".t-price").value, desc: b.editor.getHtml() };
+      tariffs[b.dataset.code] = { desc: b.editor.getHtml() };
     });
     try {
-      const r = await api("/api/settings/tariffs", { json: { tariffs, senior_limit: $("#senior-limit").value } });
+      const r = await api("/api/settings/tariffs", { json: { tariffs } });
       render(r.settings);
       toast("Tariflar saqlandi");
     } catch (err) { toast(err.message, true); }

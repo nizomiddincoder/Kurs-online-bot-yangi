@@ -2,6 +2,8 @@
 import os
 import re
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from dotenv import load_dotenv
 
@@ -11,7 +13,26 @@ KNOWN_VARS = (
     "BOT_TOKEN", "ADMIN_IDS", "DATABASE_URL", "ADMIN_PANEL_PASSWORD", "FREE_CHANNEL_ID", "FREE_CHANNEL_LINK",
     "PAID_CHANNEL_ID", "CARD_NUMBER", "CARD_HOLDER", "PAID_CHANNEL_PRICE", "TARIFF_BASIC", "TARIFF_MIDDLE",
     "TARIFF_SENIOR", "SENIOR_LIMIT", "TIMEZONE",
+    # Webinar voronkasi
+    "WEBINAR_DATETIME", "CODEWORD", "COURSE_GROUP_ID", "RECORDINGS_CHAT_ID", "PRICE_STANDARD_FULL",
+    "PRICE_STANDARD_OFFER", "PRICE_PREMIUM_FULL", "PRICE_PREMIUM_OFFER", "PREMIUM_SEATS", "OFFER_HOURS", "TEST_MODE",
 )
+
+DT_FORMATS = ("%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M:%S", "%d.%m.%Y %H.%M")
+
+
+def parse_local_dt(raw: str, tz) -> datetime:
+    """'2026-10-25 20:00' (Toshkent vaqti) → bazadagi kabi UTC (tzinfo'siz). Xato bo'lsa ValueError."""
+    if isinstance(tz, str):
+        tz = ZoneInfo(tz)
+    raw = (raw or "").strip()
+    for fmt in DT_FORMATS:
+        try:
+            local = datetime.strptime(raw, fmt).replace(tzinfo=tz)
+            return local.astimezone(timezone.utc).replace(tzinfo=None)
+        except ValueError:
+            continue
+    raise ValueError("Sana-vaqt 2026-10-25 20:00 ko'rinishida bo'lishi kerak")
 SYSTEM_PREFIXES = ("RAILWAY_", "PYTHON", "GPG_", "NIXPACKS", "LANG", "LC_")
 SYSTEM_VARS = {"PATH", "HOME", "HOSTNAME", "PWD", "SHLVL", "TERM", "TZ", "PORT", "_"}
 
@@ -109,6 +130,18 @@ class Config:
     panel_password_hash: str = ""  # paneldan o'zgartirilgan parol (bazada saqlanadi)
     web_port: int = 8080
     subscription_days: int = 30
+    # --- Webinar voronkasi ---
+    webinar_at: datetime | None = None  # UTC (tzinfo'siz)
+    codeword: str = ""
+    course_group_id: int = 0  # Premium kurs guruhi
+    recordings_chat_id: int = 0  # Standart: dars yozuvlari chati
+    price_standard_full: int = 500000
+    price_standard_offer: int = 350000
+    price_premium_full: int = 1500000
+    price_premium_offer: int = 990000
+    premium_seats: int = 20
+    offer_hours: int = 48
+    test_mode: bool = False  # true — barcha taymerlar soat → daqiqa
     fatal: list = field(default_factory=list)  # bot ishga tusha olmaydigan muammolar
     warnings: list = field(default_factory=list)  # bot ishlaydi, lekin nimadir yetishmaydi
 
@@ -160,6 +193,26 @@ def load_config() -> Config:
             warnings.append(f"{name} raqam emas — standart qiymat ({default}) ishlatildi.")
             return default
 
+    def chat(name: str) -> int:
+        value = _chat_id(os.getenv(name))
+        if value and not isinstance(value, int):
+            warnings.append(f"{name} raqam bo'lishi kerak (-100...). Web-panel → Sozlamalar'da @username ham bo'ladi.")
+        return value if isinstance(value, int) else 0
+
+    webinar_at = None
+    raw_webinar = os.getenv("WEBINAR_DATETIME", "").strip()
+    if raw_webinar:
+        try:
+            webinar_at = parse_local_dt(raw_webinar, timezone)
+        except ValueError:
+            warnings.append(f"WEBINAR_DATETIME noto'g'ri ({raw_webinar}) — masalan: 2026-10-25 20:00")
+    else:
+        warnings.append("WEBINAR_DATETIME kiritilmagan — dars eslatmalari yuborilmaydi.")
+
+    test_mode = os.getenv("TEST_MODE", "").strip().lower() in ("1", "true", "yes", "ha", "on")
+    if test_mode:
+        warnings.append("TEST_MODE yoqilgan — barcha taymerlar soat o'rniga DAQIQA hisoblanadi. Ishga tushirishdan oldin o'chiring!")
+
     return Config(
         fatal=fatal,
         warnings=warnings,
@@ -179,4 +232,15 @@ def load_config() -> Config:
         senior_limit=num("SENIOR_LIMIT", 20),
         admin_panel_password=os.getenv("ADMIN_PANEL_PASSWORD", "").strip(),
         web_port=num("PORT", 8080),  # Railway PORT ni o'zi beradi
+        webinar_at=webinar_at,
+        codeword=os.getenv("CODEWORD", "").strip(),
+        course_group_id=chat("COURSE_GROUP_ID"),
+        recordings_chat_id=chat("RECORDINGS_CHAT_ID"),
+        price_standard_full=num("PRICE_STANDARD_FULL", 500000),
+        price_standard_offer=num("PRICE_STANDARD_OFFER", 350000),
+        price_premium_full=num("PRICE_PREMIUM_FULL", 1500000),
+        price_premium_offer=num("PRICE_PREMIUM_OFFER", 990000),
+        premium_seats=num("PREMIUM_SEATS", 20),
+        offer_hours=num("OFFER_HOURS", 48),
+        test_mode=test_mode,
     )

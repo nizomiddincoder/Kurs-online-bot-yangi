@@ -14,9 +14,9 @@ from services.tg_html import plain_length, sanitize
 from web.auth import set_login_cookie
 from web.common import BOT, CFG, SM, bad_request
 
-TARIFFS = ("basic", "middle", "senior")
+TARIFFS = ("standard", "premium")
 TEXT_LABELS = {
-    "gift_text": ("Bepul sovg'a (5 ta prompt)", "Kanalga obuna bo'lgandan keyin yuboriladi."),
+    "bonus_text": ("Kod so'z bonusi", "Foydalanuvchi kod so'zni yozganda yuboriladi. Fayl qo'shish: botda /setbonusfile."),
     "lesson_text": ("«Bepul dars» bo'limi", "Dars havolasini shu yerga qo'ying (YouTube, Telegram post...)."),
     "about_text": ("«Men haqimda» bo'limi", "O'zingiz haqingizda qisqacha."),
 }
@@ -37,7 +37,8 @@ async def _payload(request: web.Request) -> dict:
         tariffs = []
         for code in TARIFFS:
             t = await get_tariff(s, cfg, code)
-            tariffs.append({"code": code, "title": t["title"], "price": t["price"], "desc": t["desc"]})
+            tariffs.append({"code": code, "title": t["title"], "price": t["price"], "offer": t["offer"],
+                            "desc": t["desc"]})
         senior_limit = await get_senior_limit(s, cfg)
         text_values = [
             {"key": k, "label": TEXT_LABELS[k][0], "help": TEXT_LABELS[k][1], "html": await get_text(s, k)}
@@ -57,6 +58,7 @@ async def _payload(request: web.Request) -> dict:
             "bot": bot_name,
             "database": "PostgreSQL" if cfg.database_url.startswith("postgresql") else "SQLite (lokal fayl)",
             "timezone": cfg.timezone,
+            "test_mode": cfg.test_mode,
             "password_source": "panel" if cfg.panel_password_hash else "env",
         },
     }
@@ -135,20 +137,13 @@ async def save_tariffs(request: web.Request) -> web.Response:
     for code, t in (data.get("tariffs") or {}).items():
         if code not in TARIFFS:
             continue
-        price = str(t.get("price", "")).replace(" ", "")
-        if not price.isdigit() or int(price) <= 0:
-            return bad_request(f"{texts.TARIFF_NAMES[code]}: narx musbat son bo'lishi kerak")
+        # Narxlar «Webinar va tariflar» bo'limida — bu yerda faqat tavsif
         desc = sanitize(t.get("desc") or "")
         if not desc:
             return bad_request(f"{texts.TARIFF_NAMES[code]}: tavsif bo'sh")
         if plain_length(desc) > 3000:
             return bad_request(f"{texts.TARIFF_NAMES[code]}: tavsif juda uzun")
-        updates += [(f"tariff_{code}_price", price), (f"tariff_{code}_desc", desc)]
-    limit = str(data.get("senior_limit", "")).strip()
-    if limit:
-        if not limit.isdigit():
-            return bad_request("Senior joylar soni butun son bo'lishi kerak")
-        updates.append(("senior_limit", limit))
+        updates.append((f"tariff_{code}_desc", desc))
     async with request.app[SM]() as s:
         for key, value in updates:
             await set_setting(s, key, value)

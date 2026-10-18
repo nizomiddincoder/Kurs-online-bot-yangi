@@ -1,18 +1,19 @@
-"""Statistika va Excel eksport."""
+"""Statistika, Excel/CSV eksport, issiq lidlar."""
+import csv
+import io
 from collections import defaultdict
 from io import BytesIO
 
 from openpyxl import Workbook
 from openpyxl.styles import Font
-from sqlalchemy import func, select
+from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import texts
 from config import Config
 from db.models import Enrollment, Group, Payment, Subscription, User
-from db.repo import count_pending_payments, senior_seats_used
+from db.repo import count_pending_payments
 from services.common import esc, fmt_money, now_utc, to_local
-from services.settings import get_senior_limit
 
 
 async def active_subs_count(session: AsyncSession) -> int:
@@ -46,23 +47,65 @@ async def build_stats(session: AsyncSession, config: Config) -> str:
         f"• {texts.PRODUCT_TITLES.get(p, p)}: <b>{c}</b> ta — {fmt_money(s)} so'm" for p, c, s in pay_rows
     ) or texts.NO_DATA
 
-    groups = list(await session.scalars(select(Group).order_by(Group.id)))
-    groups_text = "\n".join(
-        texts.GROUP_LINE.format(
-            icon="🟢" if g.active else "⚪️", title=esc(g.title), tariff=texts.GROUP_TARIFFS.get(g.tariff, g.tariff),
-            members=g.members_count, capacity=g.capacity,
-        ) for g in groups
-    ) or texts.NO_DATA
+    from services.funnel import fmt_when, premium_left  # aylana importdan qochish
+
+    now = now_utc()
+    webinar = texts.STATS_WEBINAR.format(
+        when=fmt_when(config.webinar_at),
+        codeword=await session.scalar(select(func.count()).select_from(User).where(User.webinar_watched.is_(True))) or 0,
+        offers=await session.scalar(select(func.count()).select_from(User).where(User.offer_expires_at > now)) or 0,
+        premium_left=await premium_left(session, config), premium_total=config.premium_seats,
+    )
 
     return texts.STATS.format(
         total=total, registered=registered, blocked=blocked,
-        segments=segments, sources=sources, payments=payments,
+        segments=segments, sources=sources, payments=payments, webinar=webinar,
         pay_count=sum(r[1] for r in pay_rows), pay_sum=fmt_money(sum(r[2] for r in pay_rows)),
         pending=await count_pending_payments(session),
         active_subs=await active_subs_count(session),
-        senior_used=await senior_seats_used(session), senior_limit=await get_senior_limit(session, config),
-        groups=groups_text,
     )
+
+
+async def hot_leads(session: AsyncSession) -> list[User]:
+    """Biznes egasi + kod so'z yozgan + kurs uchun to'lamagan."""
+    from services.funnel import COURSE_PRODUCTS
+
+    paid = exists().where(Payment.user_id == User.id, Payment.product.in_(COURSE_PRODUCTS),
+                          Payment.status == "approved")
+    return list(await session.scalars(
+        select(User).where(User.segment == "biz", User.webinar_watched.is_(True), ~paid)
+        .order_by(User.codeword_at.desc())
+    ))
+
+
+async def build_leads_csv(session: AsyncSession) -> tuple[bytes, int]:
+    """Barcha foydalanuvchilar CSV (Excel to'g'ri ochishi uchun UTF-8 BOM va «;» ajratgich)."""
+    users = list(await session.scalars(select(User).order_by(User.id)))
+    subs = {s.user_id: s for s in (await session.scalars(select(Subscription))).unique()}
+    purchases, totals = defaultdict(list), defaultdict(int)
+    for p in await session.scalars(select(Payment).where(Payment.status == "approved").order_by(Payment.id)):
+        purchases[p.user_id].append(texts.PRODUCT_TITLES.get(p.product, p.product))
+        totals[p.user_id] += p.amount
+
+    def dt(value):
+        return to_local(value).strftime("%Y-%m-%d %H:%M") if value else ""
+
+    buf = io.StringIO()
+    writer = csv.writer(buf, delimiter=";")
+    writer.writerow(["ID", "Telegram ID", "Ism", "Telefon", "Username", "Segment", "Muammo", "Manba",
+                     "Ro'yxatdan o'tgan", "Ro'yxat yakunlangan", "Bepul kanalda", "Kod so'z", "Kod so'z vaqti",
+                     "Taklif tugashi", "Xaridlar", "Jami to'lov", "Pullik kanal gacha", "Bloklagan"])
+    for u in users:
+        sub = subs.get(u.id)
+        writer.writerow([
+            u.id, u.tg_id, u.full_name or "", u.phone or "", f"@{u.username}" if u.username else "",
+            texts.SEGMENTS.get(u.segment or "", ""), (u.problem or "").replace("\n", " "), u.source or "direct",
+            dt(u.created_at), "ha" if u.registered else "yo'q",
+            {True: "ha", False: "yo'q"}.get(u.free_member, ""), "ha" if u.webinar_watched else "yo'q",
+            dt(u.codeword_at), dt(u.offer_expires_at), ", ".join(purchases[u.id]), totals[u.id],
+            dt(sub.end_at) if sub and sub.status == "active" else "", "ha" if u.is_blocked else "",
+        ])
+    return buf.getvalue().encode("utf-8-sig"), len(users)
 
 
 def _local(dt):

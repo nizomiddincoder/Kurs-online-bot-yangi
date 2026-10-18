@@ -119,7 +119,7 @@ def confirm_cancel_kb(tg_id: int) -> InlineKeyboardMarkup:
 
 
 def tariff_choice_kb() -> InlineKeyboardMarkup:
-    return _kb(*[[Btn(text=name, callback_data=f"st:{code}")] for code, name in texts.TARIFF_NAMES.items()])
+    return _kb(*[[Btn(text=texts.TARIFF_NAMES[code], callback_data=f"st:{code}")] for code in ("standard", "premium")])
 
 
 def groups_kb(groups) -> InlineKeyboardMarkup:

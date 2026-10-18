@@ -21,7 +21,7 @@ MENU_BUTTONS = {BTN_COURSE, BTN_PAID, BTN_FREE_LESSON, BTN_ABOUT, BTN_CONTACT, B
 BTN_SEND_PHONE = "📱 Raqamni yuborish"
 BTN_CANCEL = "❌ Bekor qilish"
 BTN_GO_CHANNEL = "📢 Kanalga o'tish"
-BTN_CHECK_SUB = "✅ Tekshirish"
+BTN_CHECK_SUB = "✅ Obuna bo'ldim"
 BTN_SEND_RECEIPT = "📤 Chekni yuborish"
 BTN_RENEW = "🔄 Uzaytirish"
 BTN_JOIN_CHANNEL = "🔗 Kanalga qo'shilish"
@@ -38,13 +38,15 @@ BTN_SEND = "🚀 Yuborish"
 # ============================================================
 # LUG'ATLAR
 # ============================================================
-SEGMENTS = {"smm": "SMM mutaxassisi", "biz": "Biznes egasi", "learn": "O'rganuvchi"}
+SEGMENTS = {"smm": "SMM mutaxassis", "biz": "Biznes egasi", "learn": "Boshlovchi"}
 
-TARIFF_NAMES = {"basic": "Basic", "middle": "Middle", "senior": "Senior"}
+TARIFF_NAMES = {"standard": "Standart", "premium": "Premium", "basic": "Basic", "middle": "Middle", "senior": "Senior"}
 GROUP_TARIFFS = {"basic": "Basic", "middle": "Middle", "senior": "Senior", "any": "Har qanday tarif"}
 
 PRODUCT_TITLES = {
     "paid_channel": "Pullik kanal (30 kun)",
+    "tariff_standard": "Online kurs — Standart",
+    "tariff_premium": "Online kurs — Premium",
     "tariff_basic": "Online kurs — Basic",
     "tariff_middle": "Online kurs — Middle",
     "tariff_senior": "Online kurs — Senior",
@@ -59,10 +61,18 @@ PAYMENT_STATUSES = {"pending": "⏳ Kutilmoqda", "approved": "✅ Tasdiqlangan",
 # ============================================================
 WELCOME = (
     "Assalomu alaykum! 👋\n\n"
-    "Botimizga xush kelibsiz! Bu yerda sizni foydali materiallar, online kurs "
-    "va yopiq kanalimiz kutmoqda.\n\n"
+    "Siz <b>bepul online darsga</b> ro'yxatdan o'tyapsiz.{webinar}\n\n"
+    "Darsda AI va SMM yordamida mijoz jalb qilishning amaliy usullarini ko'rsatamiz: "
+    "tayyor promptlar, kontent tizimi va real misollar.\n\n"
     "Boshlash uchun <b>ism va familiyangizni</b> yozing:"
 )
+WEBINAR_LINE = "\n\n🗓 Dars vaqti: <b>{when}</b> (Toshkent vaqti)"
+ASK_PROBLEM = (
+    "Qaysi muammo bilan kelyapsiz? ✍️\n\n"
+    "Qisqacha yozing — masalan: «mijoz kam», «kontentga vaqt yetmaydi», «AI'ni qanday ishlatishni bilmayman». "
+    "Darsda aynan shunga e'tibor beramiz."
+)
+PROBLEM_TEXT_ONLY = "Iltimos, javobni matn ko'rinishida yozing."
 WELCOME_BACK = "Qaytganingizdan xursandmiz, <b>{name}</b>! 👋\nQuyidagi menyudan kerakli bo'limni tanlang."
 ASK_NAME_AGAIN = "Iltimos, ism va familiyangizni matn ko'rinishida yozing (masalan: <i>Aziz Karimov</i>)."
 ASK_PHONE = (
@@ -78,12 +88,16 @@ SEGMENT_CHOSEN = "Tanlovingiz: <b>{segment}</b> ✅"
 USE_BUTTONS = "Iltimos, yuqoridagi tugmalardan birini bosing 👆"
 ASK_SUBSCRIBE = (
     "Oxirgi qadam! 🎁\n\n"
-    "Bepul sovg'ani olish uchun bepul kanalimizga obuna bo'ling, so'ng "
-    "<b>«✅ Tekshirish»</b> tugmasini bosing."
+    "Dars havolasi bepul kanalimizda e'lon qilinadi. Kanalga obuna bo'ling, so'ng "
+    "<b>«✅ Obuna bo'ldim»</b> tugmasini bosing."
 )
-NOT_SUBSCRIBED = "Siz hali kanalga obuna bo'lmagansiz. Avval obuna bo'ling, so'ng «Tekshirish»ni bosing."
+NOT_SUBSCRIBED = "Siz hali kanalga obuna bo'lmagansiz. Avval obuna bo'ling, so'ng «Obuna bo'ldim»ni bosing."
 SUB_CONFIRMED = "✅ Obuna tasdiqlandi! Mana sizga va'da qilingan sovg'a 👇"
-REG_DONE = "✅ Ro'yxatdan o'tdingiz! Mana sizga va'da qilingan sovg'a 👇"
+REG_DONE = (
+    "✅ <b>Ro'yxatdan o'tdingiz!</b>{webinar}\n\n"
+    "Dars havolasi <b>bepul kanalimizda</b> e'lon qilinadi — kanalni kuzatib boring. "
+    "Dars oldidan sizga eslatma yuboramiz 🔔"
+)
 ADMIN_FREE_CHANNEL_MISSING = (
     "⚠️ <b>Bepul kanal sozlanmagan.</b> Foydalanuvchilar obuna bosqichisiz ro'yxatdan o'tkazilmoqda.\n"
     "Web-panel → Sozlamalar → «Bepul kanal ID si» ni kiriting."
@@ -130,7 +144,15 @@ DEFAULT_ABOUT = (
     "👤 <b>Men haqimda</b>\n\n"
     "(Bu matnni admin /setabout buyrug'i orqali o'zgartiradi.)"
 )
+DEFAULT_BONUS = (
+    "🎁 <b>Darsni ko'rganingiz uchun bonus!</b>\n\n"
+    "(Bu matnni web-panel → Sozlamalar → «Bot matnlari» yoki /setbonus orqali o'zgartirasiz. "
+    "Fayl qo'shish uchun: /setbonusfile)"
+)
 DEFAULT_TARIFF_DESC = {
+    "standard": "✅ Barcha dars yozuvlari\n✅ Amaliy topshiriqlar\n✅ Pullik kanalga 30 kunlik kirish",
+    "premium": "✅ Standart tarifidagi hammasi\n✅ Yopiq kurs guruhi va jonli savol-javob\n"
+               "✅ Uy vazifalarini shaxsan tekshirish\n⚠️ Joylar soni cheklangan",
     "basic": "✅ Video darslar\n✅ Uy vazifalari\n✅ Umumiy guruhda savol-javob",
     "middle": "✅ Basic tarifidagi hammasi\n✅ Uy vazifalarini tekshirish\n✅ Haftalik jonli efirlar",
     "senior": "✅ Middle tarifidagi hammasi\n✅ Shaxsiy mentorlik\n✅ Real loyiha ustida ishlash\n"
@@ -299,14 +321,17 @@ ADMIN_PANEL = (
     "⚙️ <b>Admin panel</b>\n\n"
     "Kerakli bo'limni tanlang.\n\n"
     "<b>Buyruqlar:</b>\n"
-    "/setgift — bepul sovg'a matnini o'zgartirish\n"
+    "/stats — statistika (webinar, tariflar, tushum)\n"
+    "/broadcast — xabar tarqatish (hammaga yoki segmentga)\n"
+    "/export — barcha foydalanuvchilar (CSV)\n"
+    "/hot — issiq lidlar: biznes egasi + kod so'z yozgan + to'lamagan\n"
+    "/setbonus — kod so'zdan keyingi bonus matni\n"
+    "/setbonusfile — bonusga fayl biriktirish\n"
+    "/settariff — Standart/Premium tavsifini o'zgartirish\n"
     "/setlesson — «Bepul dars» matnini o'zgartirish\n"
     "/setabout — «Men haqimda» matnini o'zgartirish\n"
-    "/settariff — tarif narxi va tavsifini o'zgartirish\n"
-    "/setseniorlimit 20 — Senior joylar sonini o'zgartirish\n"
-    "/addgroup basic 20 — guruh qo'shish (guruh ichida yozing)\n"
-    "/groups — guruhlar ro'yxati\n"
-    "/cancel — joriy amalni bekor qilish"
+    "/cancel — joriy amalni bekor qilish\n\n"
+    "Dars vaqti, kod so'z va narxlar: web-panel → Sozlamalar."
 )
 BTN_ADM_STATS = "📊 Statistika"
 BTN_ADM_EXPORT = "📥 Lidlar (Excel)"
@@ -322,12 +347,18 @@ STATS = (
     "🚫 Botni bloklaganlar: <b>{blocked}</b>\n\n"
     "<b>Segmentlar:</b>\n{segments}\n\n"
     "<b>Manbalar:</b>\n{sources}\n\n"
+    "{webinar}"
     "<b>To'lovlar (tasdiqlangan):</b>\n{payments}\n"
-    "Jami: <b>{pay_count}</b> ta — <b>{pay_sum} so'm</b>\n"
+    "Jami tushum: <b>{pay_count}</b> ta — <b>{pay_sum} so'm</b>\n"
     "⏳ Kutilayotgan: <b>{pending}</b>\n\n"
-    "💎 Faol pullik obunachilar: <b>{active_subs}</b>\n"
-    "🎓 Senior joylar: <b>{senior_used}/{senior_limit}</b>\n\n"
-    "<b>Guruhlar:</b>\n{groups}"
+    "💎 Faol pullik obunachilar: <b>{active_subs}</b>"
+)
+STATS_WEBINAR = (
+    "<b>Webinar:</b>\n"
+    "🗓 Dars: {when}\n"
+    "🔑 Kod so'z yozganlar: <b>{codeword}</b>\n"
+    "⏳ Hozir faol takliflar: <b>{offers}</b>\n"
+    "👑 Premium joylar: <b>{premium_left}/{premium_total}</b> qoldi\n\n"
 )
 NO_DATA = "—"
 NO_PENDING = "Kutilayotgan to'lovlar yo'q ✅"
@@ -362,7 +393,7 @@ BC_AUDIENCES = {
     "all": "👥 Hammaga",
     "seg:smm": "🏷 SMM mutaxassislari",
     "seg:biz": "🏷 Biznes egalari",
-    "seg:learn": "🏷 O'rganuvchilar",
+    "seg:learn": "🏷 Boshlovchilar",
     "nopurchase": "🛒 Xarid qilmaganlar",
     "paid": "💎 Pullik obunachilar",
 }
@@ -436,8 +467,92 @@ BOT_ADDED_TO_CHAT = (
     "✅ Bot <b>{title}</b> ga admin qilindi.\n"
     "Turi: {kind}\nID: <code>{chat_id}</code>\n\n"
     "Kerak bo'lsa, bu ID ni web-panel → ⚙️ Sozlamalar ga qo'ying "
-    "(kurs guruhi bo'lsa — guruh ichida /addgroup yozing)."
+    "(Premium kurs guruhi yoki yozuvlar chati bo'lsa — «Webinar va tariflar» bo'limiga)."
 )
 BOT_REMOVED_FROM_CHAT = "⚠️ Bot <b>{title}</b> da adminlikdan olindi yoki chiqarildi (ID: <code>{chat_id}</code>)."
 CHAT_KINDS = {"channel": "kanal", "group": "guruh", "supergroup": "guruh"}
 ERROR_ALERT ="🚨 <b>Botda xato</b>\n\n<code>{error}</code>"
+
+# ============================================================
+# WEBINAR VORONKASI
+# ============================================================
+# {when} — dars vaqti (masalan «25-oktabr, 20:00»), {left} — qancha vaqt qoldi
+REMIND_24H = (
+    "📅 <b>Eslatma:</b> bepul dars <b>{when}</b> da bo'lib o'tadi ({left} qoldi).\n\n"
+    "Dars havolasi bepul kanalimizda e'lon qilinadi — kanalni kuzatib boring."
+)
+REMIND_DAY = (
+    "☀️ <b>Bugun bepul dars!</b> Soat <b>{time}</b> da boshlaymiz.\n\n"
+    "Vaqtingizni band qilib qo'ying — darsda tayyor promptlar va real misollar bo'ladi."
+)
+REMIND_1H = "⏰ Darsgacha <b>{left}</b> qoldi! Havola bepul kanalda e'lon qilinadi."
+REMIND_10M = "🔴 <b>{left}dan keyin boshlaymiz!</b> Bepul kanalga o'ting — havola o'sha yerda."
+BTN_OPEN_CHANNEL = "📢 Kanalga o'tish"
+
+CODEWORD_ACCEPTED = "🎉 <b>Kod so'z qabul qilindi!</b> Darsda qatnashganingiz uchun rahmat."
+
+OFFER_HEAD = (
+    "🔥 <b>Maxsus taklif — faqat siz uchun!</b>\n"
+    "⏳ Maxsus narx tugashiga: <b>{left}</b>\n"
+)
+OFFER_HEAD_FULL = "📚 <b>Online kurs tariflari</b>\n"
+OFFER_TARIFF = "\n<b>{icon} {title}</b>\n{price}\n{extra}{desc}\n"
+OFFER_PRICE_SPECIAL = "<s>{full} so'm</s> → <b>{offer} so'm</b>"
+OFFER_PRICE_FULL = "<b>{full} so'm</b>"
+OFFER_SEATS = "👥 Qolgan joy: <b>{left}/{total}</b>\n"
+OFFER_SEATS_GONE = "❌ <b>Joylar tugadi</b>\n"
+OFFER_FOOT = "\nTarifni tanlang 👇"
+BTN_TARIFF_PRICE = "{title} — {price} so'm"
+BTN_PREMIUM_GONE = "Premium — Joylar tugadi"
+PREMIUM_GONE_ALERT = "Afsuski, Premium joylari tugadi. Standart tarif hali ochiq."
+
+FOLLOWUP_AFTER = (
+    "🎬 <b>Dars tugadi — qatnashganingiz uchun rahmat!</b>\n\n"
+    "📼 Dars yozuvi <b>{rec_hours} soat</b> mavjud: ulgurmagan bo'lsangiz, bepul kanalda ko'ring.\n\n"
+    "Darsda aytilgan maxsus taklif siz uchun ham amal qiladi 👇"
+)
+FOLLOWUP_24 = (
+    "💡 <b>Natijalar va savol-javob</b>\n\n"
+    "Kursimiz o'quvchilari birinchi oydayoq kontentga ketadigan vaqtni 2–3 baravar qisqartirib, "
+    "mijozlar oqimini oshirmoqda. Savollaringiz bo'lsa — «✉️ Admin bilan bog'lanish» orqali yozing, "
+    "shaxsan javob beramiz.\n\n"
+    "Maxsus narx tugashiga <b>{left}</b> qoldi."
+)
+FOLLOWUP_44 = (
+    "⏳ <b>{left} qoldi!</b>\n\n"
+    "Maxsus narx tez orada tugaydi — keyin kurs to'liq narxda bo'ladi."
+)
+BTN_SHOW_OFFER = "🔥 Taklifni ko'rish"
+DOWNSELL = (
+    "Maxsus taklif muddati tugadi.\n\n"
+    "Kursga hozir tayyor bo'lmasangiz — <b>pullik kanalimiz</b> bilan boshlang: tayyor promptlar, "
+    "amaliy darslar va yangiliklar. Atigi <b>{price} so'm / oy</b>."
+)
+BTN_DOWNSELL = "💎 Pullik kanal — {price} so'm"
+
+COURSE_APPROVED_LINKS = (
+    "✅ <b>To'lovingiz tasdiqlandi!</b> Siz <b>{tariff}</b> tarifiga yozildingiz 🎉\n\n"
+    "Pullik kanal obunangiz <b>{end}</b> gacha amal qiladi.\n\n"
+    "Pastdagi tugmalar orqali qo'shilish so'rovini yuboring — bot uni avtomatik tasdiqlaydi.\n"
+    "⚠️ Havolalar 24 soat amal qiladi va faqat siz uchun."
+)
+COURSE_LINK_LATER = "\n\n⏳ Kurs chatiga havola tez orada yuboriladi."
+BTN_COURSE_GROUP = "👥 Kurs guruhiga qo'shilish"
+BTN_RECORDINGS = "📼 Dars yozuvlariga qo'shilish"
+ADMIN_COURSE_CHAT_MISSING = (
+    "⚠️ <b>{tariff}</b> to'lovi tasdiqlandi, lekin <b>{what}</b> sozlanmagan — foydalanuvchiga havola berilmadi.\n"
+    "{user}\n\nWeb-panel → Sozlamalar → «Webinar va tariflar» da ID ni kiriting va foydalanuvchini qo'lda qo'shing."
+)
+COURSE_CHAT_NAMES = {"premium": "Premium kurs guruhi (COURSE_GROUP_ID)", "standard": "Yozuvlar chati (RECORDINGS_CHAT_ID)"}
+
+HOT_HEAD = "🔥 <b>Issiq lidlar</b> — biznes egasi, kod so'z yozgan, to'lamagan: <b>{count}</b> ta\n"
+HOT_LINE = "\n• <a href=\"tg://user?id={tg_id}\">{name}</a> — {phone}{username}\n  <i>{problem}</i>"
+HOT_EMPTY = "🔥 Hozircha issiq lid yo'q (biznes egasi + kod so'z yozgan + to'lamagan)."
+CSV_CAPTION = "📥 Barcha foydalanuvchilar ({count} ta) — CSV (Excel'da ochiladi)"
+ASK_BONUS_FILE = (
+    "Bonus faylni yuboring (hujjat, rasm yoki video — izoh bilan bo'lishi mumkin).\n"
+    "Faylni olib tashlash: <code>/setbonusfile off</code>. Bekor qilish: /cancel"
+)
+BONUS_FILE_SAVED = "✅ Bonus fayl saqlandi. Kod so'z yozganlarga matn bilan birga yuboriladi."
+BONUS_FILE_REMOVED = "✅ Bonus fayl olib tashlandi."
+BONUS_FILE_WRONG = "Iltimos, fayl, rasm yoki video yuboring."

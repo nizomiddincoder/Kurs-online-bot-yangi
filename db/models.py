@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from db.base import Base
@@ -25,6 +25,25 @@ class User(Base):
     free_member: Mapped[bool | None] = mapped_column(Boolean)
     paid_member: Mapped[bool | None] = mapped_column(Boolean)
     members_checked_at: Mapped[datetime | None] = mapped_column(DateTime)
+    # --- Webinar voronkasi ---
+    problem: Mapped[str | None] = mapped_column(Text)  # «Qaysi muammo bilan kelyapsiz?»
+    webinar_watched: Mapped[bool | None] = mapped_column(Boolean, default=False)  # kod so'z yozdi
+    codeword_at: Mapped[datetime | None] = mapped_column(DateTime)
+    offer_started_at: Mapped[datetime | None] = mapped_column(DateTime)
+    offer_expires_at: Mapped[datetime | None] = mapped_column(DateTime, index=True)
+
+
+class FunnelMark(Base):
+    """Kimga qaysi avtomatik xabar yuborilgani (eslatma, follow-up). Restartdan keyin ham
+    takroriy yuborilmaydi: (user_id, key) juftligi yagona."""
+
+    __tablename__ = "funnel_marks"
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_funnel_user_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    key: Mapped[str] = mapped_column(String(80))
+    sent_at: Mapped[datetime] = mapped_column(DateTime, default=now_utc)
 
 
 class ChatMessage(Base):

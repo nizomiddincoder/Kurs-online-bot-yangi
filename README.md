@@ -27,11 +27,19 @@ scheduler/jobs.py   — har kuni 10:00 dagi vazifa
    Har bir admin botga kamida bir marta `/start` bosishi kerak, aks holda bot unga xabar yubora olmaydi.
 3. **Kanal ID sini bilish:** kompyuterda https://web.telegram.org/a/ ni oching, kanalni oching —
    manzil satrida `#-100...` ko'rinadi. Shu raqam (minus bilan) — kanal ID si.
-4. **Botni admin qiling** — bepul kanal, pullik kanal va har bir kurs guruhida:
+4. **Botni ADMIN qiling — 4 ta joyda (majburiy):**
+   - **FREE_CHANNEL** — bepul kanal (obunani tekshirish uchun);
+   - **PAID_CHANNEL** — pullik kanal (havola berish va muddati o'tganlarni chiqarish uchun);
+   - **COURSE_GROUP** — Premium kurs guruhi;
+   - **RECORDINGS_CHAT** — Standart uchun dars yozuvlari chati.
+
+   Har birida bu huquqlar yoqilgan bo'lsin:
    - «Foydalanuvchilarni qo'shish / havola orqali taklif qilish» ✅
    - «Foydalanuvchilarni bloklash (ban)» ✅
-5. **Pullik kanal va guruhlar yopiq (private)** bo'lsin. Bot o'zi shaxsiy havola yaratadi.
-6. Kurs guruhlarida «anonim admin» rejimini o'chiring (aks holda `/addgroup` sizni admin deb tanimaydi).
+
+   Bot admin qilinganda sizga o'zi chat ID sini yozib yuboradi.
+5. **Pullik kanal va kurs chatlari yopiq (private)** bo'lsin. Bot har bir to'lovchiga shaxsiy, bir martalik havola beradi.
+6. Kurs guruhlarida «anonim admin» rejimini o'chiring.
 
 ---
 
@@ -72,6 +80,28 @@ ADMIN_PANEL_PASSWORD=bu-yerga-kuchli-parol
    - Qolganlari (kanal ID lari, havola, karta, narxlar, matnlar) **web-panel → ⚙️ Sozlamalar** da qulay kiritiladi —
      bu yerda yozish shart emas. Agar xohlasangiz, `.env.example` dagi nomlar bilan bu yerga ham yozish mumkin;
      panelda kiritilgan qiymat ustun bo'ladi.
+
+   **Webinar voronkasi uchun** (Railway'ga yoki web-panel → Sozlamalar → «Webinar va tariflar»ga):
+
+```
+WEBINAR_DATETIME=2026-10-25 20:00
+CODEWORD=AZAPRO
+FREE_CHANNEL_ID=-100...
+FREE_CHANNEL_LINK=https://t.me/...
+PAID_CHANNEL_ID=-100...
+COURSE_GROUP_ID=-100...
+RECORDINGS_CHAT_ID=-100...
+CARD_NUMBER=8600 1234 5678 9012
+CARD_HOLDER=Ism Familiya
+PRICE_STANDARD_FULL=500000
+PRICE_STANDARD_OFFER=350000
+PRICE_PREMIUM_FULL=1500000
+PRICE_PREMIUM_OFFER=990000
+PREMIUM_SEATS=20
+OFFER_HOURS=48
+PAID_CHANNEL_PRICE=25000
+TEST_MODE=false
+```
 3. **Update Variables** → Railway avtomatik qayta deploy qiladi.
 
 ### E. Tekshirish
@@ -166,17 +196,42 @@ To'rtta bo'lim (⚙️ Sozlamalar — yuqoridagi 2-G qismda):
 
 | Buyruq | Vazifasi |
 |---|---|
-| `/admin` yoki «⚙️ Admin panel» | Statistika, Excel, tarqatish, kutilayotgan to'lovlar, qidiruv, guruhlar |
-| `/setgift` | Bepul sovg'a (5 ta prompt) matni |
-| `/setlesson` | «Bepul dars» matni |
-| `/setabout` | «Men haqimda» matni |
-| `/settariff` | Tarif narxi va tavsifi |
-| `/setseniorlimit 20` | Senior joylar soni |
-| `/addgroup basic 20` | Guruh qo'shish (guruh ichida yoziladi). Tarif: basic/middle/senior/any |
-| `/groups` | Guruhlar ro'yxati, yoqish/o'chirish |
+| `/admin` yoki «⚙️ Admin panel» | Statistika, Excel, tarqatish, kutilayotgan to'lovlar, qidiruv |
+| `/stats` | Ro'yxatdagilar, segmentlar, manbalar, kod so'z yozganlar, tariflar bo'yicha to'lovlar, Premium qolgan joy, tushum |
+| `/broadcast` | Xabar tarqatish: hammaga / segmentga / xarid qilmaganlarga (matn, rasm, video, tugma) |
+| `/export` | Barcha foydalanuvchilar CSV fayli (Excel'da ochiladi) |
+| `/hot` | Issiq lidlar: biznes egasi + kod so'z yozgan + to'lamagan — shaxsan yozish uchun |
+| `/setbonus` | Kod so'zdan keyingi bonus matni |
+| `/setbonusfile` | Bonusga fayl/rasm/video biriktirish (`/setbonusfile off` — olib tashlash) |
+| `/settariff` | Standart/Premium tavsifi (narxlar — web-panel → Sozlamalar) |
+| `/setlesson`, `/setabout` | «Bepul dars», «Men haqimda» matnlari |
 | `/cancel` | Joriy amalni bekor qilish |
 
-Matnlarda Telegram formatlashi (qalin, kursiv, havola) saqlanadi.
+Matnlarda Telegram formatlashi (qalin, kursiv, havola) saqlanadi. Bot javob beradigan barcha matnlar — `texts.py` faylida.
+
+---
+
+## 5a. Webinar voronkasi qanday ishlaydi
+
+| Vaqt | Kimga | Nima |
+|---|---|---|
+| Ro'yxatdan o'tish | — | Ism → telefon → «Siz kimsiz?» → «Qaysi muammo bilan kelyapsiz?» → bepul kanalga obuna (tekshiriladi) → «link kanalda e'lon qilinadi» |
+| Dars − 24 soat | Ro'yxatdagilar | Eslatma |
+| Dars kuni 10:00 | Ro'yxatdagilar | Eslatma |
+| Dars − 1 soat | Ro'yxatdagilar | Eslatma |
+| Dars − 10 daqiqa | Ro'yxatdagilar | Eslatma + kanal tugmasi |
+| Kod so'z yozilganda | O'sha odam | Bonus + 48 soatlik shaxsiy taklif (<s>to'liq narx</s> → maxsus narx, Premium qolgan joy) |
+| Dars + 2 soat | To'lamaganlar | Taklif + «yozuv 24 soat mavjud». Kod so'z yozmaganlarning 48 soati shu paytdan boshlanadi |
+| Taklif + 24 soat | To'lamaganlar | Keys / savol-javob |
+| Taklif + 44 soat | To'lamaganlar | «4 soat qoldi» |
+| Taklif tugagach | To'lamaganlar | Downsell: pullik kanal 25 000 so'm/oy |
+| Har kuni 10:00 | Pullik kanal obunachilari | 3 kun va 1 kun qolganda eslatma + to'lash tugmasi; muddati o'tganlar kanaldan chiqariladi (qayta kira oladi) |
+
+- **To'lov tasdiqlangach:** Premium → kurs guruhi havolasi, Standart → yozuvlar chati havolasi; ikkalasiga pullik kanal havolasi va obuna 30 kun. Havolalar bir martalik va faqat shu odam uchun.
+- **Premium joylari** tasdiqlangan Premium to'lovlardan hisoblanadi; tugasa «Joylar tugadi», Standart ochiq qoladi.
+- **Barcha holat bazada:** bot qayta ishga tushsa ham eslatmalar va taymerlar davom etadi, hech narsa ikki marta yuborilmaydi.
+- **Sekundiga ~20 xabar** — Telegram limitidan past. Botni bloklaganlar belgilanadi va o'tkazib yuboriladi.
+- **TEST_MODE=true** — barcha soatlar daqiqaga, daqiqalar soniyaga qisqaradi (48 soat → 48 daqiqa). Sinab bo'lgach albatta `false` qiling.
 
 ---
 
