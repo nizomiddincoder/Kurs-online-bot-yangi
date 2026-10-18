@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 
 COOKIE = "adm_session"
 TTL = 7 * 24 * 3600  # 7 kun
-PUBLIC_PATHS = {"/login", "/api/login", "/favicon.ico"}
+PUBLIC_PATHS = {"/login", "/api/login", "/favicon.ico", "/health"}
 
 _fails: dict[str, tuple[int, float]] = {}  # ip -> (xatolar soni, bloklanish tugashi)
 

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker
 from config import Config
 from web import auth, chat, content, settings, users
 from web.common import BOT, CFG, SM
+from web.setup import start_setup_web
 
 log = logging.getLogger(__name__)
 STATIC = Path(__file__).parent / "static"
@@ -16,6 +17,10 @@ STATIC = Path(__file__).parent / "static"
 
 async def index(request: web.Request) -> web.FileResponse:
     return web.FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache"})
+
+
+async def health(request: web.Request) -> web.Response:
+    return web.json_response({"ok": True})
 
 
 async def login_page(request: web.Request):
@@ -43,6 +48,7 @@ def create_app(bot: Bot, sessionmaker: async_sessionmaker, config: Config) -> we
     app[CFG] = config
     app.router.add_get("/", index)
     app.router.add_get("/login", login_page)
+    app.router.add_get("/health", health)
     app.router.add_static("/static", STATIC)
     auth.setup(app)
     users.setup(app)
@@ -54,8 +60,10 @@ def create_app(bot: Bot, sessionmaker: async_sessionmaker, config: Config) -> we
 
 async def start_web(bot: Bot, sessionmaker: async_sessionmaker, config: Config) -> web.AppRunner | None:
     if not (config.admin_panel_password or config.panel_password_hash):
-        log.warning("ADMIN_PANEL_PASSWORD berilmagan — web admin-panel o'chirilgan")
-        return None
+        # Bot ishlayveradi, panel manzilida esa 502 o'rniga «Sozlash kerak» sahifasi
+        return await start_setup_web(
+            config, "Bot ishlayapti, lekin web-panel uchun parol (ADMIN_PANEL_PASSWORD) kiritilmagan."
+        )
     runner = web.AppRunner(create_app(bot, sessionmaker, config), access_log=None)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", config.web_port).start()

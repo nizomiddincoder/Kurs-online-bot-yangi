@@ -15,8 +15,13 @@ def segments_kb() -> InlineKeyboardMarkup:
     return _kb(*[[Btn(text=name, callback_data=f"seg:{code}")] for code, name in texts.SEGMENTS.items()])
 
 
-def subscribe_kb(link: str) -> InlineKeyboardMarkup:
-    return _kb([Btn(text=texts.BTN_GO_CHANNEL, url=link)], [Btn(text=texts.BTN_CHECK_SUB, callback_data="sub:check")])
+def subscribe_kb(link: str | None) -> InlineKeyboardMarkup:
+    rows = []
+    # Havolasiz tugmani Telegram rad etadi — havola bo'lmasa, faqat «Tekshirish» qoladi
+    if link and link.startswith(("https://", "http://", "tg://")):
+        rows.append([Btn(text=texts.BTN_GO_CHANNEL, url=link)])
+    rows.append([Btn(text=texts.BTN_CHECK_SUB, callback_data="sub:check")])
+    return _kb(*rows)
 
 
 # ---------------- To'lov ----------------

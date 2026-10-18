@@ -6,12 +6,12 @@ from datetime import datetime, timedelta
 from aiogram import Bot
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 import texts
 from config import Config
-from db.models import Payment, Subscription, User
+from db.models import Payment, ProcessedUpdate, Subscription, User
 from db.repo import count_pending_payments
 from keyboards.inline import renew_kb
 from services.chats import kick_from_chat
@@ -83,6 +83,9 @@ async def send_daily_report(bot: Bot, sessionmaker: async_sessionmaker, config: 
 async def daily_job(bot: Bot, sessionmaker: async_sessionmaker, config: Config) -> None:
     log.info("Kunlik vazifa boshlandi")
     try:
+        async with sessionmaker() as session:  # eski update yozuvlarini tozalash
+            await session.execute(delete(ProcessedUpdate).where(ProcessedUpdate.created_at < now_utc() - timedelta(days=2)))
+            await session.commit()
         stats = await check_subscriptions(bot, sessionmaker, config)
         await send_daily_report(bot, sessionmaker, config, stats)
     except Exception as e:

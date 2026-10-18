@@ -83,7 +83,20 @@ ASK_SUBSCRIBE = (
 )
 NOT_SUBSCRIBED = "Siz hali kanalga obuna bo'lmagansiz. Avval obuna bo'ling, so'ng «Tekshirish»ni bosing."
 SUB_CONFIRMED = "✅ Obuna tasdiqlandi! Mana sizga va'da qilingan sovg'a 👇"
-MENU_HINT = "Quyidagi menyudan kerakli bo'limni tanlang 👇"
+REG_DONE = "✅ Ro'yxatdan o'tdingiz! Mana sizga va'da qilingan sovg'a 👇"
+ADMIN_FREE_CHANNEL_MISSING = (
+    "⚠️ <b>Bepul kanal sozlanmagan.</b> Foydalanuvchilar obuna bosqichisiz ro'yxatdan o'tkazilmoqda.\n"
+    "Web-panel → Sozlamalar → «Bepul kanal ID si» ni kiriting."
+)
+ADMIN_FREE_LINK_MISSING = (
+    "⚠️ <b>Bepul kanal havolasi topilmadi</b> — «Kanalga o'tish» tugmasi ko'rsatilmayapti.\n"
+    "Web-panel → Sozlamalar → «Bepul kanal havolasi» ni kiriting (https://t.me/...)."
+)
+ADMIN_FREE_CHECK_FAILED = (
+    "⚠️ <b>Bot bepul kanalga obunani tekshira olmayapti</b> — foydalanuvchilar tekshiruvsiz o'tkazilmoqda.\n"
+    "Botni bepul kanalga admin qiling va web-panel → Sozlamalar'da kanal ID sini «Tekshirish» bilan tekshiring."
+)
+MENU_HINT ="Quyidagi menyudan kerakli bo'limni tanlang 👇"
 NEED_START = "Avval ro'yxatdan o'ting: /start buyrug'ini bosing."
 CANCELLED = "Bekor qilindi."
 

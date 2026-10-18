@@ -139,6 +139,15 @@ class InviteLink(Base):
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class ProcessedUpdate(Base):
+    """Ishlangan Telegram update'lar — takroriy javobdan himoya (2 kundan eskisi o'chiriladi)."""
+
+    __tablename__ = "processed_updates"
+
+    update_id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=now_utc, index=True)
+
+
 class Setting(Base):
     """Admin o'zgartiradigan matnlar va narxlar."""
 

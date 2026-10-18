@@ -16,15 +16,50 @@ LINK_TTL = timedelta(hours=24)
 MEMBER_STATUSES = {ChatMemberStatus.MEMBER, ChatMemberStatus.ADMINISTRATOR, ChatMemberStatus.CREATOR}
 
 
-async def is_member(bot: Bot, chat_id: int | str, user_id: int) -> bool:
+async def check_member(bot: Bot, chat_id: int | str, user_id: int) -> bool | None:
+    """True/False — a'zomi yoki yo'q; None — bot tekshira olmadi (kanal sozlanmagan yoki bot admin emas)."""
+    if not chat_id:
+        return None
     try:
         member = await bot.get_chat_member(chat_id, user_id)
     except Exception as e:
         log.error("get_chat_member(%s, %s) xatosi: %s", chat_id, user_id, e)
-        return False
+        return None
     if member.status in MEMBER_STATUSES:
         return True
-    return member.status == ChatMemberStatus.RESTRICTED and getattr(member, "is_member", False)
+    return member.status == ChatMemberStatus.RESTRICTED and bool(getattr(member, "is_member", False))
+
+
+async def is_member(bot: Bot, chat_id: int | str, user_id: int) -> bool:
+    return bool(await check_member(bot, chat_id, user_id))
+
+
+async def free_channel_link(bot: Bot, config) -> str | None:
+    """Bepul kanal havolasi. Kiritilmagan bo'lsa — kanalning o'zidan topadi
+    (@username → https://t.me/username, yopiq kanal → bot yaratgan doimiy havola)."""
+    link = (config.free_channel_link or "").strip()
+    if link.startswith(("https://", "http://", "tg://")):
+        return link
+    if link.startswith("t.me/"):
+        return "https://" + link
+    if link.startswith("@"):
+        return "https://t.me/" + link[1:]
+    chat_id = config.free_channel_id
+    if not chat_id:
+        return None
+    if isinstance(chat_id, str) and chat_id.startswith("@"):
+        return "https://t.me/" + chat_id[1:]
+    try:
+        chat = await bot.get_chat(chat_id)
+        if chat.username:
+            found = f"https://t.me/{chat.username}"
+        else:
+            found = chat.invite_link or await bot.export_chat_invite_link(chat_id)
+    except Exception as e:
+        log.error("Bepul kanal havolasini topib bo'lmadi (%s): %s", chat_id, e)
+        return None
+    config.free_channel_link = found  # keyingi safar qayta so'ramaslik uchun
+    return found
 
 
 async def bot_rights_problem(bot: Bot, chat_id: int | str) -> str | None:

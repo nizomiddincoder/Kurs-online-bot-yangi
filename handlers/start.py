@@ -1,8 +1,10 @@
 """/start: ism → telefon → segment → bepul kanalga obuna → sovg'a + menyu."""
 import re
+import time
 
 from aiogram import Bot, F, Router
 from aiogram.enums import ChatType
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import CommandObject, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
@@ -16,8 +18,9 @@ from db.repo import get_user
 from handlers.common import menu_for
 from keyboards.inline import segments_kb, subscribe_kb
 from keyboards.reply import phone_kb
-from services.chats import is_member
+from services.chats import check_member, free_channel_link
 from services.common import esc, now_utc
+from services.notify import notify_admins
 from services.settings import get_text
 
 router = Router()
@@ -111,7 +114,7 @@ async def press_buttons(message: Message):
 
 # Callback'lar holatga bog'lanmagan: bot qayta ishga tushsa ham ishlaydi
 @router.callback_query(F.data.startswith("seg:"))
-async def got_segment(cb: CallbackQuery, state: FSMContext, session: AsyncSession, config: Config):
+async def got_segment(cb: CallbackQuery, state: FSMContext, session: AsyncSession, bot: Bot, config: Config):
     code = cb.data.split(":", 1)[1]
     user = await get_user(session, cb.from_user.id)
     if code not in texts.SEGMENTS or user is None or not user.phone:
@@ -119,14 +122,51 @@ async def got_segment(cb: CallbackQuery, state: FSMContext, session: AsyncSessio
         return
     user.segment = code
     await session.commit()
-    await cb.message.edit_text(texts.SEGMENT_CHOSEN.format(segment=texts.SEGMENTS[code]))
+    try:
+        await cb.message.edit_text(texts.SEGMENT_CHOSEN.format(segment=texts.SEGMENTS[code]))
+    except TelegramBadRequest:
+        # Tugma ikkinchi marta bosilgan — keyingi qadam allaqachon yuborilgan, takrorlamaymiz
+        await cb.answer()
+        return
     await cb.answer()
 
     if user.registered:  # segmentni qayta tanlagan bo'lsa
         await cb.message.answer(texts.MENU_HINT, reply_markup=menu_for(user, config, cb.from_user.id))
         return
-    await cb.message.answer(texts.ASK_SUBSCRIBE, reply_markup=subscribe_kb(config.free_channel_link))
+
+    if not config.free_channel_id:
+        # Bepul kanal hali sozlanmagan — foydalanuvchini kutdirmaymiz, obuna bosqichi o'tkazib yuboriladi
+        await _alert_admins_once(bot, config, texts.ADMIN_FREE_CHANNEL_MISSING)
+        await _finish_registration(cb.message, session, user, config, subscribed=False)
+        await state.clear()
+        return
+
+    link = await free_channel_link(bot, config)
+    if not link:
+        await _alert_admins_once(bot, config, texts.ADMIN_FREE_LINK_MISSING)
+    await cb.message.answer(texts.ASK_SUBSCRIBE, reply_markup=subscribe_kb(link))
     await state.set_state(Reg.subscribe)
+
+
+_last_alert: dict[str, float] = {}
+
+
+async def _alert_admins_once(bot: Bot, config: Config, text: str) -> None:
+    """Sozlama muammosi haqida adminga soatiga ko'pi bilan bir marta yozadi."""
+    if time.monotonic() - _last_alert.get(text, -1e9) > 3600:
+        _last_alert[text] = time.monotonic()
+        await notify_admins(bot, config, text)
+
+
+async def _finish_registration(message: Message, session: AsyncSession, user: User, config: Config,
+                               subscribed: bool) -> None:
+    if not user.registered:
+        user.registered = True
+        user.registered_at = now_utc()
+        await session.commit()
+        await message.answer(texts.SUB_CONFIRMED if subscribed else texts.REG_DONE)
+        await message.answer(await get_text(session, "gift_text"), disable_web_page_preview=True)
+    await message.answer(texts.MENU_HINT, reply_markup=menu_for(user, config, user.tg_id))
 
 
 @router.callback_query(F.data == "sub:check")
@@ -135,25 +175,24 @@ async def check_subscription(cb: CallbackQuery, state: FSMContext, session: Asyn
     if user is None or not user.segment:
         await cb.answer(texts.NEED_START, show_alert=True)
         return
-    if not await is_member(bot, config.free_channel_id, cb.from_user.id):
+    member = await check_member(bot, config.free_channel_id, cb.from_user.id)
+    if member is False:
         await cb.answer(texts.NOT_SUBSCRIBED, show_alert=True)
         return
+    if member is None:
+        # Bot kanalni tekshira olmadi (bot admin emas / kanal ID xato) — foydalanuvchi aybdor emas, o'tkazamiz
+        await _alert_admins_once(bot, config, texts.ADMIN_FREE_CHECK_FAILED)
 
     await cb.answer()
     await state.clear()
-    user.free_member = True
-    user.members_checked_at = now_utc()
-    await session.commit()
+    if member:
+        user.free_member = True
+        user.members_checked_at = now_utc()
+        await session.commit()
     try:
         await cb.message.delete()
     except Exception:
-        pass
+        if user.registered:
+            return  # «Tekshirish» ikkinchi marta bosilgan — sovg'a va menyu allaqachon yuborilgan
 
-    if not user.registered:
-        user.registered = True
-        user.registered_at = now_utc()
-        await session.commit()
-        await cb.message.answer(texts.SUB_CONFIRMED)
-        await cb.message.answer(await get_text(session, "gift_text"), disable_web_page_preview=True)
-
-    await cb.message.answer(texts.MENU_HINT, reply_markup=menu_for(user, config, cb.from_user.id))
+    await _finish_registration(cb.message, session, user, config, subscribed=bool(member))
